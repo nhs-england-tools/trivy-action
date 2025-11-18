@@ -1,0 +1,131 @@
+name: Trivy IaC Scan
+description: Performs Trivy Infrastructure as Code scanning and reporting
+
+inputs:
+  scan-ref:
+    description: 'Directory or file to scan'
+    required: false
+    default: './terraform'
+  severity:
+    description: 'Comma-separated list of severity levels to report'
+    required: false
+    default: 'HIGH,CRITICAL,MEDIUM,LOW,UNKNOWN'
+  trivy-config:
+    description: 'Path to Trivy configuration file'
+    required: false
+    default: 'trivy.yaml'
+  artifact-name:
+    description: 'Name for the uploaded artifact'
+    required: false
+    default: 'trivy-iac-scan-results'
+  fail-on-critical-high:
+    description: 'Whether to fail the action on critical/high findings'
+    required: false
+    default: 'true'
+
+outputs:
+  critical-count:
+    description: 'Number of critical severity findings'
+    value: ${{ steps.report.outputs.crit }}
+  high-count:
+    description: 'Number of high severity findings'
+    value: ${{ steps.report.outputs.high }}
+  report-path:
+    description: 'Path to the generated markdown report'
+    value: 'trivy_report.md'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check if Trivy config exists
+      id: trivy-config-check
+      shell: bash
+      run: |
+        if [[ -f "${{ inputs.trivy-config }}" ]]; then
+          echo "config-exists=true" >> "$GITHUB_OUTPUT"
+          echo "config-arg=${{ inputs.trivy-config }}" >> "$GITHUB_OUTPUT"
+        else
+          echo "config-exists=false" >> "$GITHUB_OUTPUT"
+          echo "config-arg=" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Trivy IaC scan
+      uses: aquasecurity/trivy-action@0.33.0
+      with:
+        scan-type: 'config'
+        scan-ref: ${{ inputs.scan-ref }}
+        format: json
+        output: trivy-iac.json
+        severity: ${{ inputs.severity }}
+        exit-code: '0'    # don't block the upload step
+        hide-progress: true
+        trivy-config: ${{ steps.trivy-config-check.outputs.config-arg }}
+
+    - name: Upload Trivy IaC Scan Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: trivy-iac.json
+
+    - name: Build summary & counts
+      id: report
+      shell: bash
+      run: |
+        jq -r '
+        def clean: (.|tostring) | gsub("\\|"; "\\|") | gsub("\r?\n"; " ");
+        def counts: reduce (.Results[]? | .Misconfigurations[]? | .Severity // empty) as $s
+          ({CRITICAL:0,HIGH:0,MEDIUM:0,LOW:0,UNKNOWN:0}; .[$s]+=1);
+
+        counts as $c
+        |
+        # ---- TOP BANNER (only if High/Critical present) ----
+        (
+          if (($c.CRITICAL + $c.HIGH) > 0) then
+            "🚫 **Trivy gate:** **\($c.CRITICAL) Critical**, **\($c.HIGH) High** issue(s) found.\n\n"
+          else
+            "✅ **Trivy gate:** no Critical/High issues.\n\n"
+          end
+        )
+        # ---- SUMMARY REPORT ----
+        + "### Trivy IaC (Terraform) Summary\n\n"
+        + "| Severity | Count |\n|---|---|\n"
+        + (["CRITICAL","HIGH","MEDIUM","LOW","UNKNOWN"]
+          | map("| " + . + " | " + ($c[.]|tostring) + " |") | join("\n"))
+        + "\n\n<details><summary>Findings (top 50)</summary>\n\n"
+        + "| Severity | ID | Title | File |\n|---|---|---|---|\n"
+        + (
+            [ .Results[]? as $r
+              | $r.Misconfigurations[]?
+              | "| \(.Severity) | \(.ID) | \((.Title // .Message // "") | clean) | \($r.Target)\(if .CauseMetadata.StartLine? then ":\(.CauseMetadata.StartLine)\(if .CauseMetadata.EndLine? then "-\(.CauseMetadata.EndLine)" else "" end)" else "" end) |"
+            ] | .[:50] | join("\n")
+          )
+        + "\n\n</details>\n"
+        ' trivy-iac.json > trivy_report.md
+
+        # Extract counts for gating/other steps
+        read CRIT HIGH < <(jq -r '
+          reduce (.Results[]? | .Misconfigurations[]? | .Severity // empty) as $s
+            ({CRITICAL:0,HIGH:0,MEDIUM:0,LOW:0,UNKNOWN:0}; .[$s]+=1)
+          | "\(.CRITICAL) \(.HIGH)"
+        ' trivy-iac.json)
+        echo "crit=$CRIT" >> "$GITHUB_OUTPUT"
+        echo "high=$HIGH" >> "$GITHUB_OUTPUT"
+
+    - name: Publish Trivy Summary
+      if: always()
+      shell: bash
+      run: cat trivy_report.md >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Update Trivy PR comment
+      if: ${{ github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork }}
+      uses: marocchino/sticky-pull-request-comment@v2
+      with:
+        header: trivy-iac-scan
+        path: trivy_report.md
+
+    - name: Check Trivy Issue Thresholds
+      if: ${{ inputs.fail-on-critical-high == 'true' && (steps.report.outputs.crit != '0' || steps.report.outputs.high != '0') }}
+      shell: bash
+      run: |
+        echo "Critical findings detected: ${{ steps.report.outputs.crit }}"
+        echo "High
