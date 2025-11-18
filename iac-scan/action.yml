@@ -52,7 +52,7 @@ runs:
     - name: Trivy IaC scan
       uses: aquasecurity/trivy-action@0.33.0
       with:
-        scan-type: 'trivy-config'
+        scan-type: 'config'
         scan-ref: ${{ inputs.scan-ref }}
         format: json
         output: trivy-iac.json
