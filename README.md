@@ -1,3 +1,3 @@
 # trivy-action
 
-A selection of shared GitHub actions
+This repo contains a selection of shared actions that augment `aquasecurity/trivy-action`, see: https://github.com/aquasecurity/trivy-action

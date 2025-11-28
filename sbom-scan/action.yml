@@ -1,0 +1,86 @@
+name: SBOM Scan
+description: Performs SBOM scanning and reporting with optional dependency graph upload
+
+inputs:
+  image-ref:
+    description: 'Docker image reference to scan'
+    required: true
+  github-token:
+    description: 'GitHub token for dependency graph upload'
+    required: false
+  publish-to-dependency-graph:
+    description: 'Whether to publish SBOM to GitHub Dependency Graph'
+    required: false
+    default: 'false'
+  artifact-name:
+    description: 'Name for the uploaded SBOM artifact'
+    required: false
+    default: 'sbom'
+
+outputs:
+  sbom-path:
+    description: 'Path to the generated SBOM file'
+    value: 'sbom.spdx.json'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Trivy SBOM SPDX Scan
+      uses: aquasecurity/trivy-action@0.20.0
+      with:
+        scan-type: image
+        image-ref: ${{ inputs.image-ref }}
+        format: spdx-json
+        output: sbom.spdx.json
+
+    - name: Trivy SBOM Dependency Graph Upload
+      if: ${{ inputs.publish-to-dependency-graph == 'true' && inputs.github-token != '' }}
+      uses: aquasecurity/trivy-action@0.20.0
+      with:
+        scan-type: image
+        image-ref: ${{ inputs.image-ref }}
+        format: github
+        output: sbom.github.json
+        github-pat: ${{ inputs.github-token }}
+
+    - name: Upload SBOM artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: sbom.spdx.json
+
+    - name: Append SBOM inventory to summary
+      if: always()
+      shell: bash
+      run: |
+        cat > sbom_to_summary.jq <<'JQ'
+        def clean: (.|tostring) | gsub("\\|"; "\\|") | gsub("\r?\n"; " ");
+        def purl: ((.externalRefs[]? | select(.referenceType=="purl") | .referenceLocator) // "");
+        def license: (.licenseConcluded // .licenseDeclared // "");
+        def supplier: ((.supplier // "") | sub("^Person: *|^Organization: *";""));
+
+        if (has("spdxVersion") | not) then
+          "### SBOM Inventory (SPDX)\n\nSBOM is not SPDX JSON."
+        else
+          .packages as $pkgs
+          | "### SBOM Inventory (SPDX)\n\n"
+          + "| Metric | Value |\n|---|---|\n"
+          + "| Packages | " + ($pkgs|length|tostring) + " |\n\n"
+          + "<details><summary>Full inventory</summary>\n\n"
+          + "| Package | Version | Supplier | License | PURL |\n|---|---|---|---|---|\n"
+          + (
+              $pkgs
+              | map("| "
+                    + ((.name // .SPDXID) | clean)
+                    + " | " + ((.versionInfo // "") | clean)
+                    + " | " + (supplier | clean)
+                    + " | " + (license | clean)
+                    + " | " + (purl | clean)
+                    + " |")
+              | join("\n")
+            )
+          + "\n\n</details>\n"
+        end
+        JQ
+
+        jq -r -f sbom_to_summary.jq sbom.spdx.json >> "$GITHUB_STEP_SUMMARY"
