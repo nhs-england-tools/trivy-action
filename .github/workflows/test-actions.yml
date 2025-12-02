@@ -104,9 +104,11 @@ jobs:
           scan-ref: './terraform'
           severity: ${{ matrix.severity }}
           fail-on-critical-high: 'false'
+          artifact-name: 'iac-test-${{ strategy.job-index }}'
       
       - name: Test SBOM with different images
         uses: ./sbom-scan
         with:
           image-ref: ${{ matrix.image }}
           publish-to-dependency-graph: 'false'
+          artifact-name: 'sbom-test-${{ strategy.job-index }}'
