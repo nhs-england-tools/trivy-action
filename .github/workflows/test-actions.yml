@@ -31,19 +31,38 @@ jobs:
           severity: 'HIGH,CRITICAL'
           fail-on-critical-high: 'false'
       
-      - name: Verify outputs
+      - name: Verify outputs with assertions
         run: |
           echo "Critical count: ${{ steps.iac-scan.outputs.critical-count }}"
           echo "High count: ${{ steps.iac-scan.outputs.high-count }}"
           echo "Report path: ${{ steps.iac-scan.outputs.report-path }}"
           
-          # Check if report file exists
-          if [[ -f "${{ steps.iac-scan.outputs.report-path }}" ]]; then
-            echo "Report file created successfully"
-          else
-            echo "Report file not found"
+          if [[ -z "${{ steps.iac-scan.outputs.critical-count }}" ]]; then
+            echo "Critical count output is empty"
             exit 1
           fi
+          
+          if [[ -z "${{ steps.iac-scan.outputs.high-count }}" ]]; then
+            echo "High count output is empty"
+            exit 1
+          fi
+          
+          if [[ -z "${{ steps.iac-scan.outputs.report-path }}" ]]; then
+            echo "Report path output is empty"
+            exit 1
+          fi
+          
+          if [[ ! -f "${{ steps.iac-scan.outputs.report-path }}" ]]; then
+            echo "Report file not found: ${{ steps.iac-scan.outputs.report-path }}"
+            exit 1
+          fi
+          
+          if [[ ! -s "${{ steps.iac-scan.outputs.report-path }}" ]]; then
+            echo "Report file is empty"
+            exit 1
+          fi
+          
+          echo "All IaC scan assertions passed"
 
   test-sbom-scan:
     name: Test SBOM Scan Action
@@ -60,26 +79,54 @@ jobs:
           image-ref: 'alpine:3.18'
           publish-to-dependency-graph: 'false'
       
-      - name: Verify SBOM output
+      - name: Verify SBOM output with assertions
         run: |
           echo "SBOM path: ${{ steps.sbom-scan.outputs.sbom-path }}"
           
-          # Check if SBOM file exists
-          if [[ -f "${{ steps.sbom-scan.outputs.sbom-path }}" ]]; then
-            echo "SBOM file created successfully"
-            echo "SBOM size: $(wc -c < ${{ steps.sbom-scan.outputs.sbom-path }}) bytes"
-          else
-            echo "SBOM file not found"
+          if [[ -z "${{ steps.sbom-scan.outputs.sbom-path }}" ]]; then
+            echo "SBOM path output is empty"
             exit 1
           fi
           
-          # Validate SBOM is valid JSON
-          if jq empty "${{ steps.sbom-scan.outputs.sbom-path }}" 2>/dev/null; then
-            echo "SBOM is valid JSON"
-          else
+          if [[ ! -f "${{ steps.sbom-scan.outputs.sbom-path }}" ]]; then
+            echo "SBOM file not found: ${{ steps.sbom-scan.outputs.sbom-path }}"
+            exit 1
+          fi
+          
+          if [[ ! -s "${{ steps.sbom-scan.outputs.sbom-path }}" ]]; then
+            echo "SBOM file is empty"
+            exit 1
+          fi
+          
+          if ! jq empty "${{ steps.sbom-scan.outputs.sbom-path }}" 2>/dev/null; then
             echo "SBOM is not valid JSON"
             exit 1
           fi
+          
+          if ! jq -e '.spdxVersion' "${{ steps.sbom-scan.outputs.sbom-path }}" >/dev/null; then
+            echo "SBOM missing spdxVersion field"
+            exit 1
+          fi
+          
+          if ! jq -e '.name' "${{ steps.sbom-scan.outputs.sbom-path }}" >/dev/null; then
+            echo "SBOM missing name field"
+            exit 1
+          fi
+          
+          if ! jq -e '.creationInfo' "${{ steps.sbom-scan.outputs.sbom-path }}" >/dev/null; then
+            echo "SBOM missing creationInfo field"
+            exit 1
+          fi
+          
+          if ! jq -e '.packages' "${{ steps.sbom-scan.outputs.sbom-path }}" >/dev/null; then
+            echo "SBOM missing packages array"
+            exit 1
+          fi
+          
+          file_size=$(wc -c < "${{ steps.sbom-scan.outputs.sbom-path }}")
+          echo "SBOM file size: ${file_size} bytes"
+          
+          echo "All SBOM scan assertions passed"
 
   test-multiple-scenarios:
     name: Test Multiple Scenarios
