@@ -134,7 +134,7 @@ jobs:
     strategy:
       matrix:
         severity: ['HIGH,CRITICAL', 'MEDIUM,HIGH,CRITICAL']
-        image: ['alpine:3.18']
+        image: ['alpine:3.18', 'debian:11']
     
     steps:
       - name: Checkout repository
