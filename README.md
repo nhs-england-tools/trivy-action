@@ -89,6 +89,42 @@ Performs Software Bill of Materials (SBOM) scanning and reporting with optional 
 |--------|-------------|
 | `sbom-path` | Path to the generated SBOM file |
 
+### 🔍 Image Scan
+
+**Path:** `./image-scan`
+
+Performs comprehensive Trivy security scanning for Docker container images with detailed vulnerability reporting.
+
+#### Usage
+
+```yaml
+- name: Run Container Image Security Scan
+  uses: nhs-england-tools/trivy-action/image-scan@v1.1.0
+  with:
+    image-ref: 'myapp:latest'
+    severity: 'HIGH,CRITICAL'
+    fail-on-critical-high: 'true'
+```
+
+#### Inputs
+
+| Input | Description | Required | Default |
+|-------|-------------|----------|---------|
+| `image-ref` | Docker image reference to scan | Yes | - |
+| `severity` | Comma-separated list of severity levels | No | `HIGH,CRITICAL,MEDIUM,LOW,UNKNOWN` |
+| `trivy-config` | Path to Trivy configuration file | No | `trivy.yaml` |
+| `artifact-name` | Name for the uploaded artifact | No | `trivy-image-scan-results` |
+| `fail-on-critical-high` | Fail action on critical/high findings | No | `true` |
+| `ignore-unfixed` | Ignore unfixed vulnerabilities | No | `true` |
+
+#### Outputs
+
+| Output | Description |
+|--------|-------------|
+| `critical-count` | Number of critical severity findings |
+| `high-count` | Number of high severity findings |
+| `report-path` | Path to the generated markdown report |
+
 ## Complete Workflow Example
 
 ```yaml
@@ -107,9 +143,24 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Run IaC Security Scan
-        uses: nhs-england-tools/trivy-action/iac-scan@v1.0.0
+        uses: nhs-england-tools/trivy-action/iac-scan@v1.1.0
         with:
           scan-ref: './infrastructure'
+          severity: 'HIGH,CRITICAL'
+          fail-on-critical-high: 'true'
+
+  image-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build Docker Image
+        run: docker build -t myapp:${{ github.sha }} .
+      
+      - name: Run Container Image Security Scan
+        uses: nhs-england-tools/trivy-action/image-scan@v1.1.0
+        with:
+          image-ref: 'myapp:${{ github.sha }}'
           severity: 'HIGH,CRITICAL'
           fail-on-critical-high: 'true'
 
@@ -122,7 +173,7 @@ jobs:
         run: docker build -t myapp:${{ github.sha }} .
       
       - name: Generate SBOM
-        uses: nhs-england-tools/trivy-action/sbom-scan@v1.0.0
+        uses: nhs-england-tools/trivy-action/sbom-scan@v1.1.0
         with:
           image-ref: 'myapp:${{ github.sha }}'
           publish-to-dependency-graph: 'true'
@@ -132,6 +183,7 @@ jobs:
 ## Features
 
 - **IaC Security Scanning**: Comprehensive security analysis for Infrastructure as Code
+- **Container Image Scanning**: Vulnerability scanning for Docker images and containers
 - **SBOM Generation**: Software Bill of Materials creation in SPDX format
 - **GitHub Integration**: Optional dependency graph publishing
 - **Artifact Upload**: Automatic upload of scan results and SBOMs
@@ -141,7 +193,7 @@ jobs:
 ## Requirements
 
 - GitHub Actions environment
-- Docker images (for SBOM scanning)
+- Docker images (for image and SBOM scanning)
 - Terraform/IaC files (for infrastructure scanning)
 
 **Related Projects:**
