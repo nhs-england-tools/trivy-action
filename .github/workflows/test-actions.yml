@@ -159,3 +159,83 @@ jobs:
           image-ref: ${{ matrix.image }}
           publish-to-dependency-graph: 'false'
           artifact-name: 'sbom-test-${{ strategy.job-index }}'
+
+  test-image-scan:
+    name: Test Image Scan Action
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Test Image Scan with Alpine
+        id: image-scan
+        uses: ./image-scan
+        with:
+          image-ref: 'alpine:3.18'
+          severity: 'HIGH,CRITICAL'
+          fail-on-critical-high: 'false'
+      
+      - name: Verify image scan outputs
+        run: |
+          echo "Critical count: ${{ steps.image-scan.outputs.critical-count }}"
+          echo "High count: ${{ steps.image-scan.outputs.high-count }}"
+          echo "Report path: ${{ steps.image-scan.outputs.report-path }}"
+          
+          if [[ -z "${{ steps.image-scan.outputs.critical-count }}" ]]; then
+            echo "Critical count output is empty"
+            exit 1
+          fi
+          
+          if [[ -z "${{ steps.image-scan.outputs.high-count }}" ]]; then
+            echo "High count output is empty"
+            exit 1
+          fi
+          
+          if [[ -z "${{ steps.image-scan.outputs.report-path }}" ]]; then
+            echo "Report path output is empty"
+            exit 1
+          fi
+          
+          # Assert outputs are numeric
+          if ! [[ "${{ steps.image-scan.outputs.critical-count }}" =~ ^[0-9]+$ ]]; then
+            echo "Critical count is not numeric: ${{ steps.image-scan.outputs.critical-count }}"
+            exit 1
+          fi
+          
+          if ! [[ "${{ steps.image-scan.outputs.high-count }}" =~ ^[0-9]+$ ]]; then
+            echo "High count is not numeric: ${{ steps.image-scan.outputs.high-count }}"
+            exit 1
+          fi
+          
+          if [[ ! -f "${{ steps.image-scan.outputs.report-path }}" ]]; then
+            echo "Report file not found: ${{ steps.image-scan.outputs.report-path }}"
+            exit 1
+          fi
+          
+          if [[ ! -s "${{ steps.image-scan.outputs.report-path }}" ]]; then
+            echo "Report file is empty"
+            exit 1
+          fi
+          
+          echo "All image scan assertions passed"
+
+  test-image-scan-matrix:
+    name: Test Image Scan Matrix
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image: ['alpine:3.18', 'nginx:alpine', 'ubuntu:22.04']
+        severity: ['HIGH,CRITICAL', 'MEDIUM,HIGH,CRITICAL']
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Test Image Scan with matrix
+        uses: ./image-scan
+        with:
+          image-ref: ${{ matrix.image }}
+          severity: ${{ matrix.severity }}
+          fail-on-critical-high: 'false'
+          artifact-name: 'image-scan-test-${{ strategy.job-index }}'
