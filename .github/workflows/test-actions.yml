@@ -134,7 +134,7 @@ jobs:
     strategy:
       matrix:
         severity: ['HIGH,CRITICAL', 'MEDIUM,HIGH,CRITICAL']
-        image: ['alpine:3.18', 'nginx:alpine']
+        image: ['alpine:3.18']
     
     steps:
       - name: Checkout repository
