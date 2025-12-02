@@ -39,9 +39,9 @@ jobs:
           
           # Check if report file exists
           if [[ -f "${{ steps.iac-scan.outputs.report-path }}" ]]; then
-            echo "✅ Report file created successfully"
+            echo "Report file created successfully"
           else
-            echo "❌ Report file not found"
+            echo "Report file not found"
             exit 1
           fi
 
@@ -66,18 +66,18 @@ jobs:
           
           # Check if SBOM file exists
           if [[ -f "${{ steps.sbom-scan.outputs.sbom-path }}" ]]; then
-            echo "✅ SBOM file created successfully"
+            echo "SBOM file created successfully"
             echo "SBOM size: $(wc -c < ${{ steps.sbom-scan.outputs.sbom-path }}) bytes"
           else
-            echo "❌ SBOM file not found"
+            echo "SBOM file not found"
             exit 1
           fi
           
           # Validate SBOM is valid JSON
           if jq empty "${{ steps.sbom-scan.outputs.sbom-path }}" 2>/dev/null; then
-            echo "✅ SBOM is valid JSON"
+            echo "SBOM is valid JSON"
           else
-            echo "❌ SBOM is not valid JSON"
+            echo "SBOM is not valid JSON"
             exit 1
           fi
 
