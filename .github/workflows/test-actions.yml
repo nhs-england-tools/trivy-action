@@ -1,0 +1,112 @@
+name: Test Actions
+
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test-iac-scan:
+    name: Test IaC Scan Action
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Create minimal Terraform file
+        run: |
+          mkdir -p terraform
+          cat > terraform/main.tf << 'EOF'
+          resource "aws_s3_bucket" "test" {
+            bucket = "test-bucket"
+          }
+          EOF
+      
+      - name: Test IaC Scan
+        id: iac-scan
+        uses: ./iac-scan
+        with:
+          scan-ref: './terraform'
+          severity: 'HIGH,CRITICAL'
+          fail-on-critical-high: 'false'
+      
+      - name: Verify outputs
+        run: |
+          echo "Critical count: ${{ steps.iac-scan.outputs.critical-count }}"
+          echo "High count: ${{ steps.iac-scan.outputs.high-count }}"
+          echo "Report path: ${{ steps.iac-scan.outputs.report-path }}"
+          
+          # Check if report file exists
+          if [[ -f "${{ steps.iac-scan.outputs.report-path }}" ]]; then
+            echo "✅ Report file created successfully"
+          else
+            echo "❌ Report file not found"
+            exit 1
+          fi
+
+  test-sbom-scan:
+    name: Test SBOM Scan Action
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Test SBOM Scan with public image
+        id: sbom-scan
+        uses: ./sbom-scan
+        with:
+          image-ref: 'alpine:3.18'
+          publish-to-dependency-graph: 'false'
+      
+      - name: Verify SBOM output
+        run: |
+          echo "SBOM path: ${{ steps.sbom-scan.outputs.sbom-path }}"
+          
+          # Check if SBOM file exists
+          if [[ -f "${{ steps.sbom-scan.outputs.sbom-path }}" ]]; then
+            echo "✅ SBOM file created successfully"
+            echo "SBOM size: $(wc -c < ${{ steps.sbom-scan.outputs.sbom-path }}) bytes"
+          else
+            echo "❌ SBOM file not found"
+            exit 1
+          fi
+          
+          # Validate SBOM is valid JSON
+          if jq empty "${{ steps.sbom-scan.outputs.sbom-path }}" 2>/dev/null; then
+            echo "✅ SBOM is valid JSON"
+          else
+            echo "❌ SBOM is not valid JSON"
+            exit 1
+          fi
+
+  test-multiple-scenarios:
+    name: Test Multiple Scenarios
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        severity: ['HIGH,CRITICAL', 'MEDIUM,HIGH,CRITICAL']
+        image: ['alpine:3.18', 'nginx:alpine']
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Create test Terraform
+        run: |
+          mkdir -p terraform
+          echo 'resource "aws_s3_bucket" "test" { bucket = "test" }' > terraform/main.tf
+      
+      - name: Test IaC with different severities
+        uses: ./iac-scan
+        with:
+          scan-ref: './terraform'
+          severity: ${{ matrix.severity }}
+          fail-on-critical-high: 'false'
+      
+      - name: Test SBOM with different images
+        uses: ./sbom-scan
+        with:
+          image-ref: ${{ matrix.image }}
+          publish-to-dependency-graph: 'false'
