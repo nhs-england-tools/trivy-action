@@ -5,6 +5,10 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  pull-requests: write
+  issues: write
+
 jobs:
   test-iac-scan:
     name: Test IaC Scan Action

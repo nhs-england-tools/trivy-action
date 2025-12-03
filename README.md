@@ -10,7 +10,7 @@ When referencing these actions in your workflows, **always use a specific releas
 
 ```yaml
 # ✅ Good - Use specific release tag
-uses: nhs-england-tools/trivy-action/iac-scan@v1.0.0
+uses: nhs-england-tools/trivy-action/iac-scan@v1.1.0
 
 # ❌ Avoid - Using main branch in production
 uses: nhs-england-tools/trivy-action/iac-scan@main
@@ -32,7 +32,7 @@ Performs comprehensive Trivy Infrastructure as Code scanning and reporting for T
 
 ```yaml
 - name: Run Trivy IaC Scan
-  uses: nhs-england-tools/trivy-action/iac-scan@v1.0.0
+  uses: nhs-england-tools/trivy-action/iac-scan@v1.1.0
   with:
     scan-ref: './terraform'
     severity: 'HIGH,CRITICAL'
@@ -67,7 +67,7 @@ Performs Software Bill of Materials (SBOM) scanning and reporting with optional 
 
 ```yaml
 - name: Generate SBOM
-  uses: nhs-england-tools/trivy-action/sbom-scan@v1.0.0
+  uses: nhs-england-tools/trivy-action/sbom-scan@v1.1.0
   with:
     image-ref: 'myapp:latest'
     publish-to-dependency-graph: 'true'
