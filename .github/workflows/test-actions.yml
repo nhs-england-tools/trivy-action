@@ -16,7 +16,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       
       - name: Create minimal Terraform file
         run: |
@@ -74,7 +74,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       
       - name: Test SBOM Scan with public image
         id: sbom-scan
@@ -142,7 +142,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       
       - name: Create test Terraform
         run: |
@@ -170,7 +170,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       
       - name: Test Image Scan with Alpine
         id: image-scan
@@ -234,7 +234,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       
       - name: Test Image Scan with matrix
         uses: ./image-scan
