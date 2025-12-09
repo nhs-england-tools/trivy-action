@@ -56,6 +56,7 @@ runs:
       uses: aquasecurity/trivy-action@0.28.0
       with:
         image-ref: ${{ inputs.image-ref }}
+        scan-type: image
         format: json
         output: trivy-image-scan.json
         exit-code: 0
