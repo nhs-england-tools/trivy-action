@@ -128,4 +128,5 @@ runs:
       shell: bash
       run: |
         echo "Critical findings detected: ${{ steps.report.outputs.crit }}"
-        echo "High
+        echo "High findings detected: ${{ steps.report.outputs.high }}"
+        exit 1
