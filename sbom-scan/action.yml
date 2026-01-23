@@ -42,7 +42,7 @@ runs:
         elif [[ -n $IMAGE_REF && -n $REPO_PATH ]]; then
           echo "Must define only one of IMAGE_REF or REPO_PATH, not both."
           exit 1
-        exit 0
+        fi
 
     - name: Trivy SBOM SPDX Scan - Docker Image
       if: ${{ inputs.image-ref != '' }}

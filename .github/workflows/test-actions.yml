@@ -68,8 +68,8 @@ jobs:
           
           echo "All IaC scan assertions passed"
 
-  test-sbom-scan:
-    name: Test SBOM Scan Action
+  test-sbom-scan-docker-mode:
+    name: Test SBOM Scan Action - Docker Image
     runs-on: ubuntu-latest
     
     steps:
@@ -132,12 +132,12 @@ jobs:
           echo "All SBOM scan assertions passed"
 
   test-sbom-scan-repo-mode:
-    name: Test SBOM Scan Action
+    name: Test SBOM Scan Action - Git Repo
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-      - name: Test SBOM Scan with public image
+      - name: Test SBOM Scan with this repo
         id: sbom-scan
         uses: ./sbom-scan
         with:
