@@ -137,58 +137,113 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-      - name: Test SBOM Scan with this repo
-        id: sbom-scan
+      - name: Test SBOM Scan with this local repo
+        id: sbom-scan-local
         uses: ./sbom-scan
         with:
-          repo-path: "."
+          repo-path: "./"
           publish-to-dependency-graph: "false"
-          artifact-name: "sbom-from-repo"
+          artifact-name: "sbom-local-repo"
       - name: Verify SBOM output with assertions
         run: |
-          echo "SBOM path: ${{ steps.sbom-scan.outputs.sbom-path }}"
+          echo "SBOM path: ${{ steps.sbom-scan-local.outputs.sbom-path }}"
           
-          if [[ -z "${{ steps.sbom-scan.outputs.sbom-path }}" ]]; then
+          if [[ -z "${{ steps.sbom-scan-local.outputs.sbom-path }}" ]]; then
             echo "SBOM path output is empty"
             exit 1
           fi
           
-          if [[ ! -f "${{ steps.sbom-scan.outputs.sbom-path }}" ]]; then
-            echo "SBOM file not found: ${{ steps.sbom-scan.outputs.sbom-path }}"
+          if [[ ! -f "${{ steps.sbom-scan-local.outputs.sbom-path }}" ]]; then
+            echo "SBOM file not found: ${{ steps.sbom-scan-local.outputs.sbom-path }}"
             exit 1
           fi
           
-          if [[ ! -s "${{ steps.sbom-scan.outputs.sbom-path }}" ]]; then
+          if [[ ! -s "${{ steps.sbom-scan-local.outputs.sbom-path }}" ]]; then
             echo "SBOM file is empty"
             exit 1
           fi
           
-          if ! jq empty "${{ steps.sbom-scan.outputs.sbom-path }}" 2>/dev/null; then
+          if ! jq empty "${{ steps.sbom-scan-local.outputs.sbom-path }}" 2>/dev/null; then
             echo "SBOM is not valid JSON"
             exit 1
           fi
           
-          if ! jq -e '.spdxVersion' "${{ steps.sbom-scan.outputs.sbom-path }}" >/dev/null; then
+          if ! jq -e '.spdxVersion' "${{ steps.sbom-scan-local.outputs.sbom-path }}" >/dev/null; then
             echo "SBOM missing spdxVersion field"
             exit 1
           fi
           
-          if ! jq -e '.name' "${{ steps.sbom-scan.outputs.sbom-path }}" >/dev/null; then
+          if ! jq -e '.name' "${{ steps.sbom-scan-local.outputs.sbom-path }}" >/dev/null; then
             echo "SBOM missing name field"
             exit 1
           fi
           
-          if ! jq -e '.creationInfo' "${{ steps.sbom-scan.outputs.sbom-path }}" >/dev/null; then
+          if ! jq -e '.creationInfo' "${{ steps.sbom-scan-local.outputs.sbom-path }}" >/dev/null; then
             echo "SBOM missing creationInfo field"
             exit 1
           fi
           
-          if ! jq -e '.packages' "${{ steps.sbom-scan.outputs.sbom-path }}" >/dev/null; then
+          if ! jq -e '.packages' "${{ steps.sbom-scan-local.outputs.sbom-path }}" >/dev/null; then
             echo "SBOM missing packages array"
             exit 1
           fi
           
-          file_size=$(wc -c < "${{ steps.sbom-scan.outputs.sbom-path }}")
+          file_size=$(wc -c < "${{ steps.sbom-scan-local.outputs.sbom-path }}")
+          echo "SBOM file size: ${file_size} bytes"
+          
+          echo "All SBOM scan assertions passed"
+      - name: Test SBOM Scan with public remote repo
+        id: sbom-scan-remote
+        uses: ./sbom-scan
+        with:
+          repo-path: "https://github.com/PokeAPI/pokeapi"
+          publish-to-dependency-graph: "false"
+          artifact-name: "sbom-remote-repo"
+      - name: Verify SBOM output with assertions
+        run: |
+          echo "SBOM path: ${{ steps.sbom-scan-remote.outputs.sbom-path }}"
+          
+          if [[ -z "${{ steps.sbom-scan-remote.outputs.sbom-path }}" ]]; then
+            echo "SBOM path output is empty"
+            exit 1
+          fi
+          
+          if [[ ! -f "${{ steps.sbom-scan-remote.outputs.sbom-path }}" ]]; then
+            echo "SBOM file not found: ${{ steps.sbom-scan-remote.outputs.sbom-path }}"
+            exit 1
+          fi
+          
+          if [[ ! -s "${{ steps.sbom-scan-remote.outputs.sbom-path }}" ]]; then
+            echo "SBOM file is empty"
+            exit 1
+          fi
+          
+          if ! jq empty "${{ steps.sbom-scan-remote.outputs.sbom-path }}" 2>/dev/null; then
+            echo "SBOM is not valid JSON"
+            exit 1
+          fi
+          
+          if ! jq -e '.spdxVersion' "${{ steps.sbom-scan-remote.outputs.sbom-path }}" >/dev/null; then
+            echo "SBOM missing spdxVersion field"
+            exit 1
+          fi
+          
+          if ! jq -e '.name' "${{ steps.sbom-scan-remote.outputs.sbom-path }}" >/dev/null; then
+            echo "SBOM missing name field"
+            exit 1
+          fi
+          
+          if ! jq -e '.creationInfo' "${{ steps.sbom-scan-remote.outputs.sbom-path }}" >/dev/null; then
+            echo "SBOM missing creationInfo field"
+            exit 1
+          fi
+          
+          if ! jq -e '.packages' "${{ steps.sbom-scan-remote.outputs.sbom-path }}" >/dev/null; then
+            echo "SBOM missing packages array"
+            exit 1
+          fi
+          
+          file_size=$(wc -c < "${{ steps.sbom-scan-remote.outputs.sbom-path }}")
           echo "SBOM file size: ${file_size} bytes"
           
           echo "All SBOM scan assertions passed"
