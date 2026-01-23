@@ -69,24 +69,26 @@ Performs Software Bill of Materials (SBOM) scanning and reporting with optional 
 - name: Generate SBOM
   uses: nhs-england-tools/trivy-action/sbom-scan@v1.1.0
   with:
-    image-ref: 'myapp:latest'
-    publish-to-dependency-graph: 'true'
+    image-ref: "myapp:latest" # scan your docker image, or
+    repo-path: "."            # scan your git repo
+    publish-to-dependency-graph: "true"
     github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 #### Inputs
 
-| Input | Description | Required | Default |
-|-------|-------------|----------|---------|
-| `image-ref` | Docker image reference to scan | Yes | - |
-| `github-token` | GitHub token for dependency graph upload | No | - |
-| `publish-to-dependency-graph` | Publish SBOM to GitHub Dependency Graph | No | `false` |
-| `artifact-name` | Name for the uploaded SBOM artifact | No | `sbom` |
+| Input                         | Description                                | Required                                   | Default |
+| ----------------------------- | ------------------------------------------ | ------------------------------------------ | ------- |
+| `image-ref`                   | Docker image reference to scan             | Must provide either image-ref or repo-path | -       |
+| `repo-path`                   | Path to git repo to scan (local or remote) | Must provide either image-ref or repo-path | -       |
+| `github-token`                | GitHub token for dependency graph upload   | No                                         | -       |
+| `publish-to-dependency-graph` | Publish SBOM to GitHub Dependency Graph    | No                                         | `false` |
+| `artifact-name`               | Name for the uploaded SBOM artifact        | No                                         | `sbom`  |
 
 #### Outputs
 
-| Output | Description |
-|--------|-------------|
+| Output      | Description                     |
+| ----------- | ------------------------------- |
 | `sbom-path` | Path to the generated SBOM file |
 
 ### 🔍 Image Scan
