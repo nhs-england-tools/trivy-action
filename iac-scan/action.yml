@@ -14,6 +14,10 @@ inputs:
     description: "Path to Trivy configuration file"
     required: false
     default: "trivy.yaml"
+  trivy-version:
+    description: "Trivy version to install"
+    required: false
+    default: "v0.65.0"
   artifact-name:
     description: "Name for the uploaded artifact"
     required: false
@@ -49,9 +53,25 @@ runs:
           echo "config-arg=" >> "$GITHUB_OUTPUT"
         fi
 
+    - name: Setup Trivy
+      uses: aquasecurity/setup-trivy@v0.2.5
+      with:
+        version: ${{ inputs.trivy-version }}
+        cache: true
+
+    - name: Verify Trivy install
+      shell: bash
+      run: |
+        set -euo pipefail
+        which trivy
+        trivy --version
+
     - name: Trivy IaC scan
       uses: aquasecurity/trivy-action@0.33.0
+      env:
+        TRIVY_DEBUG: "true"
       with:
+        skip-setup-trivy: "true"
         scan-type: "config"
         scan-ref: ${{ inputs.scan-ref }}
         format: json
