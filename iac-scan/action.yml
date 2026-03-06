@@ -74,7 +74,7 @@ runs:
         trivy --version
 
     - name: Trivy IaC scan
-      uses: aquasecurity/trivy-action@v0.33.0
+      uses: aquasecurity/trivy-action@97e0b38c4c0a7e8f5c6c9f4e2e4c3a4f2f0c6d6d
       env:
         TRIVY_DEBUG: "true"
       with:
