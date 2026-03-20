@@ -3,50 +3,50 @@ description: Performs Trivy Infrastructure as Code scanning and reporting
 
 inputs:
   scan-ref:
-    description: "Directory or file to scan"
+    description: 'Directory or file to scan'
     required: false
-    default: "./terraform"
+    default: './terraform'
 
   severity:
-    description: "Comma-separated list of severity levels to report"
+    description: 'Comma-separated list of severity levels to report'
     required: false
-    default: "HIGH,CRITICAL,MEDIUM,LOW,UNKNOWN"
+    default: 'HIGH,CRITICAL,MEDIUM,LOW,UNKNOWN'
 
   trivy-config:
-    description: "Path to Trivy configuration file"
+    description: 'Path to Trivy configuration file'
     required: false
-    default: "trivy.yaml"
+    default: 'trivy.yaml'
 
   trivy-version:
-    description: "Trivy version to install"
+    description: 'Trivy version to install'
     required: false
-    default: "v0.69.2"
+    default: 'v0.69.2'
 
   artifact-name:
-    description: "Name for the uploaded artifact"
+    description: 'Name for the uploaded artifact'
     required: false
-    default: "trivy-iac-scan-results"
+    default: 'trivy-iac-scan-results'
 
   fail-on-critical-high:
-    description: "Whether to fail the action on critical/high findings"
+    description: 'Whether to fail the action on critical/high findings'
     required: false
-    default: "true"
+    default: 'true'
 
 outputs:
   critical-count:
-    description: "Number of critical severity findings"
+    description: 'Number of critical severity findings'
     value: ${{ steps.report.outputs.crit }}
 
   high-count:
-    description: "Number of high severity findings"
+    description: 'Number of high severity findings'
     value: ${{ steps.report.outputs.high }}
 
   report-path:
-    description: "Path to the generated markdown report"
-    value: "trivy_report.md"
+    description: 'Path to the generated markdown report'
+    value: 'trivy_report.md'
 
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
     - name: Check if Trivy config exists
       id: trivy-config-check
@@ -61,7 +61,7 @@ runs:
         fi
 
     - name: Setup Trivy
-      uses: aquasecurity/setup-trivy@v0.2.5
+      uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # 0.2.6
       with:
         version: ${{ inputs.trivy-version }}
         cache: true
@@ -74,17 +74,17 @@ runs:
         trivy --version
 
     - name: Trivy IaC scan
-      uses: aquasecurity/trivy-action@0.34.2
+      uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
       env:
-        TRIVY_DEBUG: "true"
+        TRIVY_DEBUG: 'true'
       with:
-        skip-setup-trivy: "true"
-        scan-type: "config"
+        skip-setup-trivy: 'true'
+        scan-type: 'config'
         scan-ref: ${{ inputs.scan-ref }}
-        format: "json"
-        output: "trivy-iac.json"
+        format: 'json'
+        output: 'trivy-iac.json'
         severity: ${{ inputs.severity }}
-        exit-code: "0"
+        exit-code: '0'
         hide-progress: true
         trivy-config: ${{ steps.trivy-config-check.outputs.config-arg }}
 

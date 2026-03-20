@@ -38,7 +38,7 @@ outputs:
     value: 'trivy_image_report.md'
 
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
     - name: Check if Trivy config exists
       id: trivy-config-check
@@ -53,7 +53,7 @@ runs:
         fi
 
     - name: Trivy image scan
-      uses: aquasecurity/trivy-action@0.34.2
+      uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
       with:
         scan-type: 'image'
         image-ref: ${{ inputs.image-ref }}
@@ -83,7 +83,7 @@ runs:
           | reduce .[] as $s ({CRITICAL:0,HIGH:0,MEDIUM:0,LOW:0,UNKNOWN:0}; .[$s]+=1));
         . as $root
         | (counts) as $c
-        | 
+        |
         # ---- TOP BANNER (only if High/Critical present) ----
         (
           if (($c.CRITICAL + $c.HIGH) > 0) then
@@ -111,14 +111,14 @@ runs:
             + "\n\n</details>\n"
           end)
         ' trivy-image-scan.json > trivy_image_report.md
-        
+
         # Extract counts for gating/other steps
         read CRIT HIGH < <(jq -r '
           [.Results[]? | .Vulnerabilities[]? | .Severity // "UNKNOWN"]
           | reduce .[] as $s ({CRITICAL:0,HIGH:0,MEDIUM:0,LOW:0,UNKNOWN:0}; .[$s]+=1)
           | "\(.CRITICAL) \(.HIGH)"
         ' trivy-image-scan.json)
-        
+
         echo "crit=$CRIT" >> "$GITHUB_OUTPUT"
         echo "high=$HIGH" >> "$GITHUB_OUTPUT"
 
