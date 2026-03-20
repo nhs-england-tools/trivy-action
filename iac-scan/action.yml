@@ -61,7 +61,7 @@ runs:
         fi
 
     - name: Setup Trivy
-      uses: aquasecurity/setup-trivy@v0.2.5
+      uses: aquasecurity/setup-trivy@v3fb12ec12f41e471780db15c232d5dd185dcb514 # 0.2.6
       with:
         version: ${{ inputs.trivy-version }}
         cache: true
