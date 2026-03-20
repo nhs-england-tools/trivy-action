@@ -6,7 +6,7 @@ inputs:
     description: 'Docker image reference to scan'
     required: false
   repo-path:
-    description: "Path to git repo to scan (local or remote)"
+    description: 'Path to git repo to scan (local or remote)'
     required: false
   github-token:
     description: 'GitHub token for dependency graph upload'
@@ -26,7 +26,7 @@ outputs:
     value: 'sbom.spdx.json'
 
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
     - name: Validate inputs
       shell: bash
@@ -46,7 +46,7 @@ runs:
 
     - name: Trivy SBOM SPDX Scan - Docker Image
       if: ${{ inputs.image-ref != '' }}
-      uses: aquasecurity/trivy-action@0.20.0
+      uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
       with:
         scan-type: image
         image-ref: ${{ inputs.image-ref }}
@@ -55,7 +55,7 @@ runs:
 
     - name: Trivy SBOM SPDX Scan - Repo
       if: ${{ inputs.repo-path != '' }}
-      uses: aquasecurity/trivy-action@0.20.0
+      uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
       with:
         scan-type: repo
         scan-ref: ${{ inputs.repo-path }}
@@ -64,7 +64,7 @@ runs:
 
     - name: Trivy SBOM Dependency Graph Upload
       if: ${{ inputs.publish-to-dependency-graph == 'true' && inputs.github-token != '' }}
-      uses: aquasecurity/trivy-action@0.20.0
+      uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
       with:
         scan-type: image
         image-ref: ${{ inputs.image-ref }}
